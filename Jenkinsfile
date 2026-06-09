@@ -37,24 +37,44 @@ pipeline {
                     -e MYSQL_DATABASE=%MYSQL_DB% ^
                     -p 3306:3306 ^
                     mysql:8.0
-
-                echo Waiting for MySQL to initialise...
-                ping 127.0.0.1 -n 30 > nul                """
-            }
-        }
-
-        stage('Run API') {
-            steps {
-                bat """
-                docker rm -f %API_CONT% 2>nul
-
-                docker run -d --name %API_CONT% --network %NETWORK% ^
-                    -e ConnectionStrings__DefaultConnection=Server=%MYSQL_CONT%;Port=3306;Database=%MYSQL_DB%;User=root;Password=%MYSQL_PWD%; ^
-                    -e Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLong ^
-                    -p 5263:8080 ^
-                    %IMAGE%
                 """
             }
         }
+
+        stage('Wait for MySQL') {
+            steps {
+                bat """
+                echo Waiting for MySQL to be ready...
+
+                for /L %%i in (1,1,30) do (
+                    docker exec %MYSQL_CONT% mysqladmin ping -h "localhost" --silent
+                    if not errorlevel 1 (
+                        echo MySQL is ready!
+                        goto :ready
+                    )
+                    timeout /t 1 > nul
+                )
+
+                echo MySQL not ready in time!
+                exit /b 1
+
+                :ready
+                """
+            }
+        }
+
+       stage('Run API') {
+    steps {
+        bat """
+        docker rm -f %API_CONT% 2>nul
+
+        docker run -d --name %API_CONT% --network %NETWORK% ^
+            -e "ConnectionStrings__DefaultConnection=Server=%MYSQL_CONT%;Port=3306;Database=%MYSQL_DB%;User Id=root;Password=%MYSQL_PWD%;" ^
+            -e Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLong ^
+            -p 5263:8080 ^
+            %IMAGE%
+        """
+    }
+}
     }
 }
