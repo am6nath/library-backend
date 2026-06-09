@@ -52,7 +52,7 @@ pipeline {
                         echo MySQL is ready!
                         goto :ready
                     )
-                    timeout /t 1 > nul
+ping 127.0.0.1 -n 2 > nul
                 )
 
                 echo MySQL not ready in time!
