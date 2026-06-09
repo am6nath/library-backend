@@ -39,8 +39,7 @@ pipeline {
                     mysql:8.0
 
                 echo Waiting for MySQL to initialise...
-                timeout /t 30
-                """
+                ping 127.0.0.1 -n 30 > nul                """
             }
         }
 
